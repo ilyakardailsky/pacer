@@ -7,7 +7,7 @@ module Pacer
 
     START_TIME = Time.now
 
-    BLUEPRINTS_VERSION = "2.5.0-SNAPSHOT"
-    PIPES_VERSION = "2.5.0-SNAPSHOT"
+    BLUEPRINTS_VERSION = "2.4.0"
+    PIPES_VERSION = "2.4.0"
   end
 end
