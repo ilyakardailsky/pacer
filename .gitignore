@@ -18,6 +18,9 @@ pkg
 # mac custom attributes files
 .DS_Store
 
+# rbenv
+.ruby-version
+
 # Project specific
 *.graph
 *.db

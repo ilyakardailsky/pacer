@@ -33,6 +33,7 @@ maybe_require 'pacer-neo4j'
 maybe_require 'pacer-orient'
 maybe_require 'pacer-dex'
 maybe_require 'pacer-mcfly'
+maybe_require 'pacer-titan'
 
 Run = RSpec::GraphRunner.new ENV['GRAPHS']
 

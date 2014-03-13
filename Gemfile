@@ -12,7 +12,7 @@ group :development do
   # pacer-* gems are required for testing pacer.
   # If you have the gem repos cloned locally, we'll use them.
   #
-  [ 'pacer-neo4j', 'pacer-orient', 'pacer-dex'].each do |lib|
+  [ 'pacer-neo4j', 'pacer-orient', 'pacer-dex', 'pacer-titan'].each do |lib|
     if File.directory? "../#{lib}"
       gem lib, :path => "../#{lib}" 
     end
