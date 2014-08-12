@@ -1,6 +1,7 @@
 module Pacer::Pipes
   class LoopPipe < RubyPipe
     import java.util.ArrayList
+    BlueprintsGraph = com.tinkerpop.blueprints.Graph
 
     def initialize(graph, looping_pipe, control_block)
       super()
@@ -42,7 +43,6 @@ module Pacer::Pipes
 
     def processNextStart
       while true
-        # FIXME: hasNext shouldn't be raising an exception...
         has_next = looping_pipe.hasNext
         if has_next
           element = looping_pipe.next

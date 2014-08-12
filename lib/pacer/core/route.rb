@@ -308,7 +308,7 @@ HELP
         if Pacer.hide_route_elements or hide_elements or source_iterator.nil?
           description
         else
-          graph.read_transaction do
+          graph_read_transaction do
             Pacer.hide_route_elements do
               count = 0
               limit ||= Pacer.inspect_limit
@@ -430,6 +430,8 @@ HELP
           self
         elsif @back
           @back.get_section_route(name)
+        elsif @empty_back
+          @empty_back.get_section_route(name)
         else
           raise ArgumentError, "Section #{ name } not found"
         end
@@ -606,6 +608,15 @@ HELP
         s = "#{s} #{ info }" if info
         s
       end
+
+      def graph_read_transaction(&block)
+        if graph
+          graph.read_transaction &block
+        else
+          yield
+        end
+      end
+
     end
   end
 end
