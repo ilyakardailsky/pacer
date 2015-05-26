@@ -2,17 +2,7 @@ module Pacer
   module Routes
     module RouteOperations
       def loop(opts = {}, &block)
-        chain_route(opts.merge :filter => :loop, :looping_route => block)
-      end
-
-      def all(opts = {}, &block)
-        loop(opts, &block).while do |e, depth|
-          if depth == 0
-            :loop
-          else
-            :loop_and_recur
-          end
-        end
+        chain_route(opts.merge :filter => Pacer::Filter::LoopFilter, :looping_route => block)
       end
 
       def deepest(&block)
@@ -222,8 +212,6 @@ HELP
 
       def expandable(route = nil)
         expando = Pacer::Pipes::ExpandablePipe.new
-        empty = java.util.ArrayList.new
-        expando.setStarts empty.iterator
         if route
           control_pipe = Pacer::Route.pipeline route
           control_pipe.setStarts expando

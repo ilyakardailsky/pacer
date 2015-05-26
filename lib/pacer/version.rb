@@ -1,13 +1,9 @@
 module Pacer
-  unless const_defined? :VERSION
-    VERSION = "1.5.0"
-
-    JAR = "pacer-#{ VERSION }-standalone.jar"
-    JAR_PATH = "lib/#{ JAR }"
-
+  VERSION = "2.0.17.pre"
+  # Clients may optionally define the following constants in the Pacer namespace:
+  # - LOAD_JARS : set to false to manage jar loading in the client. Be sure to load the jars defined in JARFILES.
+  # - LOCKJAR_LOCK_OPTS : set some options to be passed to LockJar.lock (ie. :lockfile, :download_artifacts, :local_repo)
+  unless const_defined? :START_TIME
     START_TIME = Time.now
-
-    BLUEPRINTS_VERSION = "2.5.0"
-    PIPES_VERSION = "2.5.0"
   end
 end

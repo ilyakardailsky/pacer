@@ -9,7 +9,7 @@ module Pacer::Core::Graph
     # @yield [ElementWrapper] filter proc, see {Pacer::Route#property_filter}
     # @return [ElementRoute] the same type and extensions as the source route.
     def filter(*filters, &block)
-      Pacer::Route.property_filter(self, filters, block)
+      Pacer::Route.property_filter(self, filters, block, true)
     end
 
     # v is undefined for edge routes.
@@ -31,6 +31,11 @@ module Pacer::Core::Graph
     # @return [Core::Route]
     def properties
       map(element_type: :hash) { |v| v.properties }
+    end
+
+    def raw_property_maps
+      chain_route(:element_type => :object,
+                  :pipe_class => Pacer::Pipes::PropertyMapPipe)
     end
 
     # Create a new TinkerGraph based on the paths of all matching elements.
@@ -161,8 +166,8 @@ module Pacer::Core::Graph
 
     protected
 
-    def configure_iterator(iter)
-      pipe = Pacer::Pipes::WrappingPipe.new graph, element_type, extensions
+    def configure_iterator(iter = nil, g = nil)
+      pipe = Pacer::Pipes::WrappingPipe.new((g || graph), element_type, extensions)
       pipe.wrapper = wrapper if wrapper
       pipe.setStarts iter
       pipe

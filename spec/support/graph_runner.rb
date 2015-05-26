@@ -1,4 +1,5 @@
 maybe_require 'pacer-neo4j/rspec'
+maybe_require 'pacer-neo4j2/rspec'
 maybe_require 'pacer-orient/rspec'
 maybe_require 'pacer-dex/rspec'
 maybe_require 'pacer-mcfly/rspec'
@@ -13,6 +14,9 @@ class RSpec::GraphRunner
     end
 
     def neo4j(*args)
+    end
+
+    def neo4j2(*args)
     end
 
     def rg(*args)
@@ -53,6 +57,7 @@ class RSpec::GraphRunner
   include Stubs
   include Tg
   include Neo4j if defined? Neo4j
+  include Neo4j2 if defined? Neo4j2
   include Dex if defined? Dex
   include Orient if defined? Orient
   include McFly if defined? McFly
@@ -130,7 +135,7 @@ protected
                 end
                 begin
                   g2_rollback.call #rescue nil
-                rescue Pacer::NestedTransactionRollback, Pacer::NestedMockTransactionRollback
+                rescue Pacer::MockTransactionRollback, Pacer::NestedTransactionRollback, Pacer::NestedMockTransactionRollback
                 end
               end
             end

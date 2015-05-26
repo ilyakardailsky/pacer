@@ -175,10 +175,12 @@ module Pacer
       edge
     end
 
+    # This method accepts only an unwrapped Blueprints Vertex
     def remove_vertex(vertex)
       blueprints_graph.removeVertex vertex
     end
 
+    # This method accepts only an unwrapped Blueprints Edge
     def remove_edge(edge)
       blueprints_graph.removeEdge edge
     end
@@ -204,7 +206,7 @@ module Pacer
     end
 
     def features
-      blueprints_graph.features
+      blueprints_graph.getFeatures
     end
 
     def inspect
@@ -367,6 +369,7 @@ module Pacer
 
     module KeyIndices
       def create_key_index(name, type = :vertex, opts = {})
+        return if key_indices(type).include? name.to_s
         params = build_key_index_parameters_from opts
         if features.supportsKeyIndices
           if element_type(type) == :vertex and features.supportsVertexKeyIndex

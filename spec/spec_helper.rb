@@ -10,6 +10,8 @@ Bundler.setup(:default, :development)
 require 'rspec'
 require 'pacer'
 require 'set'
+require 'coveralls'
+Coveralls.wear!
 
 require 'simplecov'
 SimpleCov.start if ENV['COVERAGE']
@@ -30,6 +32,7 @@ def in_editor?
 end
 
 maybe_require 'pacer-neo4j'
+maybe_require 'pacer-neo4j2'
 maybe_require 'pacer-orient'
 maybe_require 'pacer-dex'
 maybe_require 'pacer-mcfly'
@@ -39,10 +42,10 @@ Run = RSpec::GraphRunner.new ENV['GRAPHS']
 
 def use_simple_graph_data
   let(:setup_data) { e0; e1 }
-  let(:v0) { graph.transaction(nesting: true) { graph.create_vertex :name => 'eliza' } }
-  let(:v1) { graph.transaction(nesting: true) { graph.create_vertex :name => 'darrick' } }
-  let(:e0) { graph.transaction(nesting: true) { graph.create_edge nil, v0, v1, :links } }
-  let(:e1) { graph.transaction(nesting: true) { graph.create_edge nil, v0, v1, :relinks } }
+  let(:v0) { graph.create_vertex :name => 'eliza' }
+  let(:v1) { graph.create_vertex :name => 'darrick' }
+  let(:e0) { graph.create_edge nil, v0, v1, :links }
+  let(:e1) { graph.create_edge nil, v0, v1, :relinks }
 end
 
 def use_pacer_graphml_data(usage_style = :read_write)

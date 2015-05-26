@@ -39,29 +39,39 @@ module Pacer
     #   nesting: false -- (default) raise an exception instead of starting a nested transaction
     def transaction(opts = {})
       commit, rollback = start_transaction! opts
+      tx_depth = nil
       begin
+        if Pacer.verbose == :very
+          tx_depth = threadlocal_graph_info[:dx_depth]
+          puts "--#{self.class.name} transaction #{ tx_depth } --> "
+          puts caller[0,3]
+        end
         r = yield commit, rollback
-        commit.call
+        commit.call(false)
         r
       rescue Exception => e
         rollback.call e.message
         raise
       ensure
+        puts "--#{self.class.name} #{ tx_depth } <-- " if Pacer.verbose == :very
         finish_transaction!
       end
     end
+
+    alias tx transaction
 
     def read_transaction
       tgi = threadlocal_graph_info
       read_tx_depth = tgi[:read_tx_depth] ||= 0
       tgi[:read_tx_depth] += 1
       # Blueprints auto-starts the transaction
+      reopen_read_transaction
       yield
     ensure
       rtd = tgi[:read_tx_depth] -= 1
       if rtd == 0 and tgi[:tx_depth] == 0 and blueprints_graph.is_a? TransactionalGraph
         # rollback after the bottom read transaction (no changes outside a real transaction block should have been possible)
-        blueprints_graph.stopTransaction TransactionalGraph::Conclusion::FAILURE
+        blueprints_graph.rollback
       end
     end
 
@@ -99,11 +109,11 @@ module Pacer
     end
 
     def rollback_implicit_transaction
-      blueprints_graph.stopTransaction TransactionalGraph::Conclusion::FAILURE
+      blueprints_graph.rollback
     end
 
     def commit_implicit_transaction
-      blueprints_graph.stopTransaction TransactionalGraph::Conclusion::SUCCESS
+      blueprints_graph.commit
     end
 
     attr_reader :on_commit_block
@@ -120,6 +130,7 @@ module Pacer
       graphs[blueprints_graph.object_id] ||= {}
     end
 
+    # NOTE pacer-orient reimplements this
     def start_transaction!(opts)
       tgi = threadlocal_graph_info
       tx_depth = tgi[:tx_depth] ||= 0
@@ -147,31 +158,36 @@ module Pacer
       end
     end
 
+    # NOTE pacer-orient reimplements this
     def finish_transaction!
       threadlocal_graph_info[:tx_depth] -= 1 rescue nil
     end
 
+    # NOTE pacer-orient reimplements this
+    # A better name for this would be "create_real_transaction", vs. the other finalizers which are all mock transactions in the default
+    # implementation.
     def base_tx_finalizers
       tx_id = threadlocal_graph_info[:tx_id] = rand
-      commit = -> do
+      commit = ->(reopen = true) do
         if tx_id != threadlocal_graph_info[:tx_id]
           fail InternalError, 'Can not commit transaction outside its original block'
         end
         puts "transaction committed" if Pacer.verbose == :very
-        blueprints_graph.stopTransaction TransactionalGraph::Conclusion::SUCCESS
+        blueprints_graph.commit
+        # reopen arg is ignored for graphs that automatically open their tx.
         reopen_read_transaction
         on_commit_block.call if on_commit_block
       end
       rollback = ->(message = nil) do
         puts ["transaction rolled back", message].compact.join(': ') if Pacer.verbose == :very
-        blueprints_graph.stopTransaction TransactionalGraph::Conclusion::FAILURE
+        blueprints_graph.rollback
         reopen_read_transaction
       end
       [commit, rollback]
     end
 
     def nested_tx_finalizers
-      commit = -> do
+      commit = ->(reopen = true) do
         puts "nested transaction committed (noop)" if Pacer.verbose == :very
       end
       rollback = ->(message = 'Transaction Rolled Back') do
@@ -185,7 +201,7 @@ module Pacer
     end
 
     def mock_base_tx_finalizers
-      commit = -> do
+      commit = ->(reopen = true) do
         puts "mock transaction committed" if Pacer.verbose == :very
         on_commit_block.call if on_commit_block
       end
@@ -200,7 +216,7 @@ module Pacer
     end
 
     def mock_nested_tx_finalizers
-      commit = -> do
+      commit = ->(reopen = true) do
         puts "nested transaction committed (noop)" if Pacer.verbose == :very
       end
       rollback = ->(message = nil) do

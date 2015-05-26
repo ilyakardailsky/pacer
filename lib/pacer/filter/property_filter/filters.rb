@@ -60,7 +60,12 @@ module Pacer
         attr_accessor :search_manual_indices
 
         def initialize(graph, filters)
-          @graph = graph
+          if graph.is_a? Pacer::Wrappers::ElementWrapper
+            # this can happen if the starting route is actually a single element.
+            @graph = graph.graph
+          else
+            @graph = graph
+          end
           @properties = []
           @blocks = []
           @extensions = []
@@ -69,6 +74,27 @@ module Pacer
           @non_ext_props = []
           @best_index_value = nil
           add_filters filters, nil
+          combine_sets
+        end
+
+        def combine_sets
+          is_set = properties.group_by { |p| p[1].is_a? Set }
+          sets = is_set[true] # [["x", Set[]] ...]
+          if sets
+            is_multi = sets.group_by { |a| a.count > 1 }
+            multi = is_multi[true]
+            if multi
+              multi = multi.group_by { |m| m.first } # {"x": [["x", Set[]], ...]}
+              result = multi.map do |multi_set|
+                multi_set[1].reduce do |result, pair|
+                  [result[0], result[1].intersection(pair[1])]
+                end
+              end
+              result = result.concat(is_multi[false]) if is_multi[false]
+              result = result.concat(is_set[false]) if is_set[false]
+              @properties = result
+            end
+          end
         end
 
         # Set which graph this filter is currently operating on
@@ -108,15 +134,30 @@ module Pacer
           end
         end
 
+        # Not used for regular filtering, but useful to test an element against
+        # a complex set of conditions without having to build a route.
+        #
+        # Returns a proc that can be called with an element to test and returns
+        # true if the element matches the conditions.
+        def to_predicate
+          expando, pipe = build_pipeline(nil, com.tinkerpop.pipes.util.iterators.ExpandableIterator.new)
+          proc do |e|
+            expando.add e
+            pipe.next if pipe.hasNext
+          end
+        end
+
         def build_pipeline(route, start_pipe, pipe = nil)
-          self.graph = route.graph
           pipe ||= start_pipe
-          route_modules.each do |mod|
-            extension_route = mod.route(Pacer::Route.empty(route))
-            s, e = extension_route.send :build_pipeline
-            s.setStarts(pipe) if pipe
-            start_pipe ||= s
-            pipe = e
+          if route
+            self.graph = route.graph
+            route_modules.each do |mod|
+              extension_route = mod.route(Pacer::Route.empty(route))
+              s, e = extension_route.send :build_pipeline
+              s.setStarts(pipe) if pipe
+              start_pipe ||= s
+              pipe = e
+            end
           end
           encoded_properties.each do |key, value|
             case value
@@ -135,6 +176,7 @@ module Pacer
             end
           end
           blocks.each do |block|
+            # Will work if route is nil.
             block_pipe = Pacer::Pipes::BlockFilterPipe.new(route, block)
             block_pipe.set_starts pipe if pipe
             Pacer.debug_pipes << { :name => 'block', :start => pipe, :end => block_pipe } if Pacer.debug_pipes
@@ -205,7 +247,6 @@ module Pacer
           when Hash
             reset_properties
             filter.each do |k, v|
-              v = v.first if v.is_a? Set and v.length == 1
               self.non_ext_props << [k.to_s, v] unless extension
               self.properties << [k.to_s, v]
             end

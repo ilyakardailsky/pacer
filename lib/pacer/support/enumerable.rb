@@ -1,6 +1,5 @@
 # Extend the built-in Enumerable module:
 module Enumerable
-
   def one?
     counter = 0
     each do
@@ -19,23 +18,15 @@ module Enumerable
   def to_hashset(method = nil, *args)
     return self if self.is_a? java.util.HashSet and not method
     hs = java.util.HashSet.new
-    iter = self.each rescue nil
-    if not iter and respond_to? :iterator
-      iter = self.iterator
-    end
-    e = iter.next
     if method
-      while true
+      each do |e|
         hs.add e.send(method, *args)
-        e = iter.next
       end
     else
-      while true
+      each do |e|
         hs.add e
-        e = iter.next
       end
     end
-  rescue StopIteration, Pacer::EmptyPipe, java.util.NoSuchElementException
     hs
   end
 
@@ -45,10 +36,6 @@ module Enumerable
 
   def to_iterable
     Pacer::Pipes::EnumerablePipe.new self
-  end
-
-  def +(other)
-    Pacer::Pipes::MultiPipe.new [self, other]
   end
 
   # NOTE: if this is a collection of wrapped vertices or edges, Java pipes

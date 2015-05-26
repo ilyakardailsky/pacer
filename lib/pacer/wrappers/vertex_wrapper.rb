@@ -78,7 +78,7 @@ module Pacer::Wrappers
       if exts.length == 1 and not exts.first.is_a?(Module) and not exts.first.is_a?(Class) and exts.first
         # NB: oops, I defined route#as to be the same as route#section. If the signature is
         #     matching the section method, then defer to it.
-        section *exts
+        section exts.first
       elsif as?(*exts)
         exts_to_add = extensions_missing(exts)
         extended = exts_to_add.empty? ? self : add_extensions(exts_to_add)
@@ -102,10 +102,19 @@ module Pacer::Wrappers
     end
 
     def as?(*exts)
-      has_exts = extensions_missing(exts).all? do |ext|
-        if ext.respond_to? :route_conditions
-          ext.route_conditions(graph).all? do |k, v|
-            self[k] == v
+      extensions_missing(exts).all? do |ext|
+        rc = if ext.respond_to? :route_conditions
+               ext.route_conditions(graph)
+             elsif ext.respond_to? :lookup
+               ext.lookup(graph)
+             end
+        if rc
+          rc.all? do |k, v|
+            if v.is_a? Set
+              v.include? self[k]
+            else
+              self[k] == v
+            end
           end
         else
           true
@@ -239,7 +248,9 @@ module Pacer::Wrappers
       labels = Set[]
       exts = []
       mixed.each do |obj|
-        if obj.is_a? Symbol or obj.is_a? String
+        if obj.is_a? Symbol
+          labels << obj.to_s
+        elsif obj.is_a? String
           labels << obj
         else
           exts << obj

@@ -10,8 +10,6 @@ module Pacer::Pipes
       @wrapper = Pacer::Wrappers::WrapperSelector.build graph
 
       @expando = ExpandablePipe.new
-      empty = ArrayList.new
-      @expando.setStarts empty.iterator
       looping_pipe.setStarts(@expando)
       if control_block.arity < 0 or control_block.arity > 2
         @yield_paths = true
@@ -43,8 +41,7 @@ module Pacer::Pipes
 
     def processNextStart
       while true
-        has_next = looping_pipe.hasNext
-        if has_next
+        if looping_pipe.hasNext
           element = looping_pipe.next
           depth = (expando.metadata || 0) + 1
           self.next_path = looping_pipe.getCurrentPath if pathEnabled

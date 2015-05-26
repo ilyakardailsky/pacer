@@ -21,6 +21,33 @@ end
 require 'java'
 require 'pp'
 require 'rubygems'
+require 'lock_jar'
+require 'pacer/support/lock_jar'
+require 'pacer-ext.jar'
+
+if ENV['PACER_MANUAL_JARS']
+  require 'pacer/support/lock_jar_disabler'
+else
+  bundle_jarfiles = LockJar.register_bundled_jarfiles # defined in pacer/support/lock_jar.rb
+  unless bundle_jarfiles
+    LockJar.register_jarfile(File.join(File.dirname(__FILE__), "..", "Jarfile"))
+  end
+  if defined? Pacer::LOCKJAR_OPTS
+    LockJar.lock_registered_jarfiles LOCKJAR_OPTS
+    LockJar.load LOCKJAR_OPTS
+  else
+    if bundle_jarfiles
+      LockJar.lock_registered_jarfiles lockfile: 'Jarfile.lock'
+      LockJar.load 'Jarfile.lock'
+    else
+      LockJar.lock_registered_jarfiles lockfile: 'Jarfile.pacer.lock'
+      LockJar.load 'Jarfile.pacer.lock'
+    end
+  end
+  if bundle_jarfiles
+    require 'pacer/support/lock_jar_disabler'
+  end
+end
 
 module Pacer
   unless const_defined? :PATH
@@ -30,15 +57,6 @@ module Pacer
   end
 
   require 'pacer/version'
-
-  if RUBY_VERSION =~ /^1.9/
-    Enumerator = ::Enumerator
-  else
-    Enumerator = Enumerable::Enumerator
-  end
-
-  require JAR
-
   require 'pacer/loader'
 
   class << self
